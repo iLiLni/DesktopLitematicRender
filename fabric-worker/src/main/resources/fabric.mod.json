@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "litematic_render_worker",
+  "version": "1.0.0",
+  "name": "Desktop Litematic Render Worker",
+  "description": "Textured PNG renderer for Desktop Litematic Render.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "studio.litematicrender.worker.WorkerClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.1.2",
+    "java": ">=25"
+  }
+}

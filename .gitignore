@@ -1,0 +1,30 @@
+# Node
+node_modules/
+coverage/
+dist/
+out/
+
+# Runtime data
+runtime/
+
+# Java / Gradle build outputs
+**/build/
+**/.build-tmp.*/
+.gradle/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Generated local reports
+DsLR-PCL-info.txt
+
+# Generated / user content
+*.log
+*.png
+*.litematic
+
+# OS
+.DS_Store
+Thumbs.db

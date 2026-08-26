@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Litematic 静态图渲染器</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="page-header">
+        <div>
+          <div class="brand-row">
+            <p class="eyebrow">DsLR · CONTROLLER</p>
+            <label class="theme-toggle" for="theme-toggle">
+              <input id="theme-toggle" type="checkbox" />
+              <span>夜间模式</span>
+            </label>
+          </div>
+          <h1>Litematic 静态图渲染器</h1>
+          <p class="subtitle">Minecraft 原版资源 · 对角正交图 / 标准等距图 · Fabric 渲染 Worker</p>
+        </div>
+        <div class="status-badge" id="worker-status">等待实例接入</div>
+      </header>
+
+      <div class="dashboard-grid">
+        <article class="card game-card">
+          <div class="card-heading">
+            <div>
+              <h2>Minecraft 游戏文件夹</h2>
+              <p>读取游戏资源、版本信息、投影文件和实例资源包。</p>
+            </div>
+          </div>
+          <label class="field-label" for="instance-path">游戏目录或版本隔离目录</label>
+          <div class="input-action">
+            <input id="instance-path" type="text" spellcheck="false" autocomplete="off" placeholder="D:\Minecraft\.minecraft" />
+            <button class="button primary" id="inspect-instance" type="button">读取</button>
+          </div>
+          <p class="path-examples">通用：<code>D:\Minecraft\.minecraft</code><br />版本隔离：<code>D:\Minecraft\.minecraft\versions\版本名</code></p>
+          <div class="instance-summary" id="instance-summary">尚未读取游戏文件夹。</div>
+          <label class="field-label" for="version-input">目标 Minecraft 版本</label>
+          <input id="version-input" list="version-options" type="text" spellcheck="false" autocomplete="off" placeholder="可从列表选择，也可手动输入版本名" />
+          <datalist id="version-options"></datalist>
+        </article>
+
+        <article class="card schematic-card">
+          <div class="card-heading">
+            <div>
+              <h2>投影文件 / 原理图</h2>
+              <p>读取实例根目录和当前版本目录中的 <code>schematics</code>。</p>
+            </div>
+          </div>
+          <label class="field-label" for="schematic-select">实例内投影文件</label>
+          <div class="select-stack">
+            <select id="schematic-select" disabled aria-label="实例内投影文件"></select>
+            <p class="select-placeholder" id="schematic-placeholder">从已扫描的投影文件选择，或拖入 / 填写外部文件。</p>
+          </div>
+          <div class="drop-zone" id="litematic-drop-zone" data-kind="litematic" tabindex="0">
+            <strong>拖入 .litematic 文件</strong>
+            <span>临时副本只用于本次渲染会话</span>
+            <input id="litematic-file" type="file" accept=".litematic" hidden />
+          </div>
+          <div class="input-action compact">
+            <input id="litematic-path" type="text" spellcheck="false" placeholder="外部 .litematic 完整路径" />
+            <button class="button secondary" id="inspect-litematic" type="button">确认</button>
+          </div>
+          <div class="file-summary" id="litematic-summary">尚未选择投影文件。</div>
+        </article>
+
+        <article class="card packs-card">
+          <div class="card-heading">
+            <div>
+              <h2>材质包 / 资源包</h2>
+              <p>默认使用 Minecraft 原版材质；选择其他包时覆盖在原版资源之上。</p>
+            </div>
+          </div>
+          <label class="field-label" for="resource-pack-select">当前材质包</label>
+          <select id="resource-pack-select" aria-label="当前材质包">
+            <option value="">Minecraft 默认材质包</option>
+          </select>
+          <p class="select-note" id="resource-pack-summary">当前使用 Minecraft 默认材质包。</p>
+          <details class="pack-add-details">
+            <summary>添加或拖入其他材质包</summary>
+            <div class="pack-add-content">
+              <div class="drop-zone compact-zone" id="resource-pack-drop-zone" data-kind="resource-pack" tabindex="0">
+                <strong>拖入资源包 ZIP 或文件夹</strong>
+                <span>文件夹会作为临时资源包导入</span>
+                <input id="resource-pack-file" type="file" accept=".zip" hidden />
+              </div>
+              <div class="drop-actions">
+                <button class="button secondary" id="pick-resource-pack-directory" type="button">选择资源包文件夹</button>
+                <input id="resource-pack-directory" type="file" webkitdirectory directory multiple hidden />
+              </div>
+              <div class="input-action compact">
+                <input id="resource-pack-path" type="text" spellcheck="false" placeholder="外部 .zip 或资源包文件夹路径" />
+                <button class="button secondary" id="add-resource-pack" type="button">添加</button>
+              </div>
+              <div class="temporary-pack-list" id="temporary-pack-list"></div>
+            </div>
+          </details>
+        </article>
+
+        <article class="card camera-card">
+          <div class="card-heading split-heading">
+            <div>
+              <h2>对角视角</h2>
+              <p>三种投影都使用对角位置；每个方向相对基准角旋转 90°。</p>
+            </div>
+            <label class="topdown-toggle"><input id="topdown-enabled" type="checkbox" />附加顶视图</label>
+          </div>
+          <div class="camera-layout">
+            <div class="preview-wrap">
+              <canvas id="camera-preview" aria-label="相机构图预览"></canvas>
+              <p class="canvas-caption">相机构图预览不代表最终 Minecraft 材质和光照。</p>
+            </div>
+            <div class="camera-options">
+              <div class="projection-options" role="radiogroup" aria-label="投影类型">
+                <label class="projection-option"><input id="projection-orthographic" name="projection" type="radio" value="orthographic" checked />对角正交图</label>
+                <label class="projection-option"><input id="projection-perspective" name="projection" type="radio" value="perspective" />35° 标准等距图</label>
+                <label class="projection-option"><input id="projection-bottom-orthographic" name="projection" type="radio" value="bottom_orthographic" />底部正交视角</label>
+              </div>
+              <div class="angle-control">
+                <div class="angle-header"><label for="azimuth-range">基准方位角</label><span id="azimuth-readout">45°</span></div>
+                <div class="range-number">
+                  <input id="azimuth-range" type="range" min="0" max="359.9" step="0.1" value="45" />
+                  <input id="azimuth-number" type="number" min="0" max="359.99" step="0.01" value="45" />
+                </div>
+              </div>
+              <div class="angle-control">
+                <div class="angle-header"><label for="elevation-range">仰角</label><span id="elevation-readout">35.264°</span></div>
+                <div class="range-number">
+                  <input id="elevation-range" type="range" min="0" max="89.9" step="0.1" value="35.264389682754654" />
+                  <input id="elevation-number" type="number" min="0" max="89.99" step="0.01" value="35.264389682754654" />
+                </div>
+              </div>
+              <p class="angle-helper">默认仰角为 35.264°；滑条适合快速调整，数值框可输入精确角度。</p>
+            </div>
+          </div>
+          <div class="direction-heading">
+            <span>输出方向</span>
+            <button class="text-button" id="select-all-directions" type="button">全选四向</button>
+            <button class="text-button" id="clear-directions" type="button">清空</button>
+          </div>
+          <div class="direction-grid" id="direction-grid">
+            <button class="direction-button selected" data-offset="0" type="button"><strong>+X +Z</strong><span>基准 · 45°</span></button>
+            <button class="direction-button selected" data-offset="90" type="button"><strong>−X +Z</strong><span>相对 +90°</span></button>
+            <button class="direction-button selected" data-offset="180" type="button"><strong>−X −Z</strong><span>相对 +180°</span></button>
+            <button class="direction-button selected" data-offset="270" type="button"><strong>+X −Z</strong><span>相对 +270°</span></button>
+          </div>
+        </article>
+
+        <article class="card output-card">
+          <div class="card-heading">
+            <div>
+              <h2>输出与执行</h2>
+              <p>透明或白底 PNG；高分辨率与并行模式会单独提示风险。</p>
+            </div>
+          </div>
+          <div class="two-fields">
+            <label class="field-label">预设分辨率
+              <select id="resolution-preset">
+                <option value="1080p">1080p · 1920 × 1080</option>
+                <option value="2160p">2160p · 3840 × 2160</option>
+                <option value="4320p">4320p · 7680 × 4320</option>
+                <option value="custom">自定义</option>
+              </select>
+            </label>
+            <label class="field-label">帧缓冲方式
+              <select id="framebuffer-mode">
+                <option value="single">单图渲染</option>
+                <option value="tiled">瓦片渲染</option>
+              </select>
+            </label>
+          </div>
+          <div class="two-fields">
+            <label class="field-label">宽度（px）<input id="output-width" type="number" min="1" max="32768" value="1920" /></label>
+            <label class="field-label">高度（px）<input id="output-height" type="number" min="1" max="32768" value="1080" /></label>
+          </div>
+          <label class="field-label" for="tile-edge">瓦片边长</label>
+          <input id="tile-edge" type="number" min="256" max="8192" step="256" value="2048" />
+          <div class="choice-grid" role="group" aria-label="背景">
+            <label class="choice"><input name="background" type="radio" value="transparent" checked />透明底 PNG</label>
+            <label class="choice"><input name="background" type="radio" value="white" />白底 PNG</label>
+          </div>
+          <label class="field-label" for="lighting-mode">光照</label>
+          <select id="lighting-mode">
+            <option value="technical_fullbright">技术全亮（Gamma 拉满）</option>
+            <option value="vanilla_standard">原版标准光照</option>
+            <option value="simulated">模拟光照（辅助）</option>
+          </select>
+          <label class="field-label">方向执行方式</label>
+          <div class="choice-grid" role="group" aria-label="方向执行方式">
+            <label class="choice"><input name="direction-schedule" type="radio" value="sequential" checked />四向依次渲染</label>
+            <label class="choice danger-choice"><input name="direction-schedule" type="radio" value="parallel" />四向同时渲染</label>
+          </div>
+          <p class="danger-note" id="parallel-note">顺序渲染：仅使用一个隐藏 Worker。</p>
+          <label class="field-label" for="output-directory">PNG 输出文件夹</label>
+          <input id="output-directory" type="text" spellcheck="false" placeholder="例如 D:\LitematicRenders" />
+          <label class="field-label" for="naming-prefix">文件名前缀</label>
+          <input id="naming-prefix" type="text" value="litematic" maxlength="60" />
+          <details class="worker-settings">
+            <summary>隐藏 Worker 高级设置</summary>
+            <label class="field-label" for="java-executable">Java 25 路径（可选）</label>
+            <input id="java-executable" type="text" spellcheck="false" placeholder="留空时尝试使用 javaw.exe" />
+            <p class="select-note">PCL 未把 Java 加入系统 PATH 时，填写 PCL 实际使用的 <code>javaw.exe</code> 完整路径。</p>
+            <button class="button secondary bridge-probe-button" id="test-fabric-bridge" type="button">测试 Fabric 隐藏启动</button>
+            <p class="select-note">此测试只检查版本 JSON、依赖、Java 与 Fabric Bridge 能否启动；不会读取投影文件，也不会输出 PNG。</p>
+          </details>
+        </article>
+
+        <article class="card task-card">
+          <div class="card-heading split-heading">
+            <div>
+              <h2>渲染任务</h2>
+              <p>会校验输入、创建隔离会话，并启动同版本 Fabric Worker。</p>
+            </div>
+            <button class="button primary render-button" id="create-render-plan" type="button">开始渲染</button>
+          </div>
+          <div class="plan-empty" id="plan-summary">
+            <strong>尚未创建任务</strong>
+            <span>选择游戏文件夹、投影文件和输出目录后开始渲染。</span>
+          </div>
+          <div class="plan-details" id="plan-details" hidden>
+            <div class="session-summary" id="session-summary" hidden></div>
+            <div class="metrics" id="plan-metrics"></div>
+            <div class="warning-list" id="warning-list"></div>
+            <div class="view-list-wrap">
+              <h3>计划输出</h3>
+              <ol class="view-list" id="view-list"></ol>
+            </div>
+          </div>
+        </article>
+      </div>
+    </main>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

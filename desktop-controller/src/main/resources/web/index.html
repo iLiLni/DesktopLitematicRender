@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DsLR · PNG Renderer</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LITEMATIC RENDER STUDIO</p>
+        <h1>DsLR · PNG RENDERER</h1>
+      </div>
+      <div class="top-actions">
+        <span id="runtime" class="runtime">正在检查 Java 运行时</span>
+        <button id="themeToggle" class="quiet-button" type="button" aria-pressed="false">夜间模式</button>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="column source-column">
+        <section class="card">
+          <h2>Minecraft 游戏文件夹</h2>
+          <p class="hint">通用示例：<code>.minecraft</code>　PCL 版本隔离：<code>.minecraft\versions\版本文件夹</code></p>
+          <label>游戏文件夹或版本文件夹
+            <input id="instancePath" type="text" placeholder="D:\Release\.minecraft 或 .minecraft\versions\版本文件夹">
+          </label>
+          <div class="split-row">
+            <label>目标 Minecraft 版本
+              <input id="version" type="text" list="versions" placeholder="读取后可选或手填">
+              <datalist id="versions"></datalist>
+            </label>
+            <button id="inspectButton" class="primary" type="button">读取游戏文件夹</button>
+          </div>
+          <p id="instanceSummary" class="notice">填写路径后读取；会扫描版本、投影文件与资源包。</p>
+        </section>
+
+        <section class="card">
+          <h2>投影文件 / 原理图</h2>
+          <p class="hint">上框只定位文件夹；下框只显示其中的投影文件名，完整路径由程序内部使用。</p>
+          <div class="split-row">
+            <label>投影文件夹
+              <input id="schematicDirectory" type="text" placeholder="D:\…\.minecraft\versions\版本\schematics">
+            </label>
+            <button id="scanSchematicsButton" type="button">扫描此文件夹</button>
+          </div>
+          <label>选择投影文件
+            <select id="litematicSelect">
+              <option value="">请先读取游戏文件夹或扫描投影文件夹</option>
+            </select>
+          </label>
+          <p id="schematicHint" class="notice">尚未选择投影文件。</p>
+        </section>
+
+        <section class="card resource-card">
+          <h2>材质包 / 资源包</h2>
+          <p class="choice">Minecraft 默认材质包（直接读取所选版本 JAR）</p>
+          <label>选择资源包
+            <select id="resourcePackSelect">
+              <option value="">Minecraft 默认材质包</option>
+            </select>
+          </label>
+          <details>
+            <summary>添加一个 ZIP 或资源包文件夹</summary>
+            <label>资源包路径
+              <input id="resourcePackPath" type="text" placeholder="可留空；手动路径会覆盖上方选择">
+            </label>
+            <p class="hint">可直接粘贴 ZIP 或资源包文件夹的完整路径。</p>
+          </details>
+        </section>
+      </div>
+
+      <div class="column render-column">
+        <section class="card camera-card">
+          <h2>对角视角</h2>
+          <div class="segmented" role="radiogroup" aria-label="投影方式">
+            <label><input type="radio" name="projection" value="orthographic" checked> 正交对角视角</label>
+            <label><input type="radio" name="projection" value="perspective"> 常规透视视角</label>
+            <label><input type="radio" name="projection" value="bottom_orthographic"> 底部正交视角</label>
+          </div>
+          <div class="range-field">
+            <label for="azimuthRange">方位角（正轴夹角）</label>
+            <input id="azimuthRange" type="range" min="0" max="359.9" step="0.1" value="45">
+            <input id="azimuth" type="number" min="0" max="359.9" step="0.1" value="45">
+          </div>
+          <div class="range-field">
+            <label for="elevationRange">俯角</label>
+            <input id="elevationRange" type="range" min="0" max="89.9" step="0.1" value="35.264">
+            <input id="elevation" type="number" min="0" max="89.9" step="0.1" value="35.264">
+          </div>
+          <p class="hint">Minecraft 坐标：Y 是上下轴，X/Z 构成水平面。标准对角俯视：方位 45°，俯角 35.264°。</p>
+          <fieldset class="directions">
+            <legend>相对四向（默认仅一个标准对角）</legend>
+            <label><input id="direction0" type="checkbox" checked> +X +Z</label>
+            <label><input id="direction90" type="checkbox"> −X +Z</label>
+            <label><input id="direction180" type="checkbox"> −X −Z</label>
+            <label><input id="direction270" type="checkbox"> +X −Z</label>
+          </fieldset>
+        </section>
+
+        <section class="card task-card">
+          <h2>渲染状态</h2>
+          <p class="hint">启动后会运行隔离的 Fabric 渲染进程；它只会在本工具关闭时关闭由 DsLR 自行启动的 Worker。</p>
+          <button id="renderButton" class="primary render-button" type="button">开始 PNG 渲染</button>
+          <pre id="status" class="status" aria-live="polite">准备就绪。先读取 Minecraft 游戏文件夹。</pre>
+        </section>
+      </div>
+
+      <div class="column output-column">
+        <section class="card output-card">
+          <h2>输出与执行</h2>
+          <label>输出比例
+            <select id="aspectRatio">
+              <option value="16:9">16 : 9</option>
+              <option value="4:3">4 : 3</option>
+              <option value="3:2">3 : 2</option>
+              <option value="1:1">1 : 1</option>
+              <option value="2:3">2 : 3</option>
+              <option value="3:4">3 : 4</option>
+              <option value="9:16">9 : 16</option>
+              <option value="custom">自定义比例</option>
+            </select>
+          </label>
+          <label>输出分辨率
+            <select id="resolution">
+              <option value="1080p">约 1080p · 2MP</option>
+              <option value="2160p">约 2160p · 8MP</option>
+              <option value="4320p">约 4320p · 33MP</option>
+              <option value="130mp">实验性 · 130MP（较慢，可能卡顿或崩溃）</option>
+            </select>
+          </label>
+          <div class="two-fields">
+            <label>宽度<input id="width" type="number" min="1" max="16384" value="1920"></label>
+            <label>高度<input id="height" type="number" min="1" max="16384" value="1080"></label>
+          </div>
+          <p id="resolutionHint" class="hint">先选输出比例；预设比例下，修改任一边会自动联动另一边。</p>
+          <label>输出背景
+            <select id="background"><option value="transparent">透明底 PNG</option><option value="white">白底 PNG</option></select>
+          </label>
+          <label>光照
+            <select id="lighting"><option value="technical_fullbright">技术全亮（Gamma 拉满）</option><option value="vanilla_standard">原版标准光照</option><option value="simulated">模拟光照</option></select>
+          </label>
+          <label>四向执行
+            <select id="schedule"><option value="sequential">四向依次渲染</option><option value="parallel">四向同时渲染（高风险）</option></select>
+          </label>
+          <p class="warning">四向同时渲染会显著增加显存、内存与崩溃风险；当前稳定模式会按顺序输出。</p>
+          <label>PNG 输出文件夹
+            <input id="outputDirectory" type="text" placeholder="正在读取默认 Pictures\LitematicRenders…">
+          </label>
+          <p class="hint">默认保存到当前 Windows 用户的 <code>Pictures\LitematicRenders</code>。</p>
+          <label>文件名前缀
+            <input id="prefix" type="text" value="litematic">
+          </label>
+        </section>
+        <section class="card small-card">
+          <h2>网页服务</h2>
+          <p class="hint">此页面只监听本机 <code>127.0.0.1</code>，不上传投影文件、材质包或图片。</p>
+          <button id="stopButton" class="danger-button" type="button">关闭网页界面与 DsLR Worker</button>
+        </section>
+      </div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

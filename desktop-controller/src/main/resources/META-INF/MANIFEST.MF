@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: studio.litematicrender.desktop.AppMain
+Implementation-Title: Desktop Litematic Render
+Implementation-Version: 1.0.0

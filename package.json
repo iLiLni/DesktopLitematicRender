@@ -1,0 +1,15 @@
+{
+  "name": "desktop-litematic-render",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chinese local controller and Fabric worker session preparation for Desktop Litematic Render.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "plan": "node src/cli/plan-render.mjs",
+    "start:ui": "node src/shell/server.mjs --open"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://desktop-litematic-render.local/schema/render-job-v1.json",
+  "title": "Desktop Litematic Render Job v1",
+  "type": "object",
+  "required": ["source", "output"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "required": ["litematicPath"],
+      "properties": {
+        "litematicPath": { "type": "string", "minLength": 1 },
+        "instancePath": { "type": "string", "minLength": 1 },
+        "minecraftVersion": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "transientPacks": { "$ref": "#/$defs/resourcePackList" },
+        "selectedInstancePackPaths": { "$ref": "#/$defs/resourcePackList" }
+      },
+      "additionalProperties": false
+    },
+    "camera": {
+      "type": "object",
+      "properties": {
+        "projections": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["orthographic", "perspective"] }
+        },
+        "baseAzimuthDeg": { "type": "number" },
+        "elevationDeg": { "type": "number", "minimum": 0, "exclusiveMaximum": 90 },
+        "selectedOffsetsDeg": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "number" }
+        },
+        "includeTopDown": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "lighting": {
+      "type": "object",
+      "properties": {
+        "mode": { "enum": ["technical_fullbright", "vanilla_standard", "simulated"] },
+        "retainVanillaFaceShading": { "type": "boolean" },
+        "ambientOcclusion": { "type": "boolean" },
+        "simulatedSunAzimuthDeg": { "type": "number" },
+        "simulatedSunElevationDeg": { "type": "number", "minimum": 0, "exclusiveMaximum": 90 }
+      },
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "required": ["directory"],
+      "properties": {
+        "directory": { "type": "string", "minLength": 1 },
+        "background": { "enum": ["transparent", "white"] },
+        "resolution": {
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1, "maximum": 32768 },
+            "height": { "type": "integer", "minimum": 1, "maximum": 32768 }
+          },
+          "additionalProperties": false
+        },
+        "paddingPercent": { "type": "number", "minimum": 0, "maximum": 50 },
+        "namingPrefix": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "framebufferMode": { "enum": ["single", "tiled"] },
+        "tileEdgePx": { "type": "integer", "minimum": 256, "maximum": 8192 },
+        "directionSchedule": { "enum": ["sequential", "parallel"] },
+        "parallelWorkers": { "type": "integer", "minimum": 1, "maximum": 4 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "resourcePackList": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string", "minLength": 1 },
+          {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "priority": { "type": "integer" }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}
